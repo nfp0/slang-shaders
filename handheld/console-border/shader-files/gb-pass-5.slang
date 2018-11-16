@@ -7,11 +7,13 @@ layout(push_constant) uniform Push
 	float SCALE;
 	float OUT_X;
 	float OUT_Y;
+	float border_on_top;
 } params;
 
 #pragma parameter SCALE "Box Scale" 0.6667 0.6667 1.5 0.33333
 #pragma parameter OUT_X "Out X" 1600.0 1600.0 4800.0 8000.0
 #pragma parameter OUT_Y "Out Y" 800.0 800.0 2400.0 400.0
+#pragma parameter border_on_top "Show Viewport" 1.0 0.0 1.0 1.0
 
 layout(std140, set = 0, binding = 0) uniform UBO
 {
@@ -48,5 +50,9 @@ void main()
 {
 	vec4 frame	=	texture(Source, vTexCoord).rgba;
 	vec4 border	=	texture(BORDER, tex_border).rgba;
+	
+	if ( vTexCoord.x < 0.9999 && vTexCoord.x > 0.0001 && vTexCoord.y < 0.9999 && vTexCoord.y > 0.0001 && params.border_on_top > 0.5 )
+	border.a *= 0.0;
+
 	FragColor	=	vec4(mix(frame, border, border.a));
 }
