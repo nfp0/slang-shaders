@@ -4,6 +4,7 @@ layout(push_constant) uniform Push
 {
 	vec4 OutputSize;
 	vec4 SourceSize;
+	vec4 OriginalSize;
 	float SCALE;
 	float OUT_X;
 	float OUT_Y;
@@ -34,7 +35,7 @@ void main()
 	vec2 middle	=	vec2(0.5, 0.5);
 	vec2 diff	=	TexCoord.xy - middle;
 	vTexCoord	=	middle + diff * scale;
-	vScreenCoord=	middle + (params.SourceSize.zw - middle) * scale;
+	vScreenCoord=	middle + (params.OriginalSize.xy - middle) * scale;
 
 	middle		=	vec2(0.5, 0.5);
 	vec2 dist	=	TexCoord - middle;
