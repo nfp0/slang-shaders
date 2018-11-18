@@ -25,6 +25,7 @@ layout(location = 0) in vec4 Position;
 layout(location = 1) in vec2 TexCoord;
 layout(location = 0) out vec2 vTexCoord;
 layout(location = 1) out vec2 tex_border;
+layout(location = 2) out vec2 vScreenCoord;
 
 void main()
 {
@@ -33,6 +34,7 @@ void main()
 	vec2 middle	=	vec2(0.5, 0.5);
 	vec2 diff	=	TexCoord.xy - middle;
 	vTexCoord	=	middle + diff * scale;
+	vScreenCoord=	middle + (params.SourceSize.zw - middle) * scale;
 
 	middle		=	vec2(0.5, 0.5);
 	vec2 dist	=	TexCoord - middle;
@@ -42,6 +44,7 @@ void main()
 #pragma stage fragment
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec2 tex_border;
+layout(location = 2) in vec2 vScreenCoord;
 layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 2) uniform sampler2D Source;
 layout(set = 0, binding = 3) uniform sampler2D BORDER;
@@ -51,7 +54,7 @@ void main()
 	vec4 frame	=	texture(Source, vTexCoord).rgba;
 	vec4 border	=	texture(BORDER, tex_border).rgba;
 	
-	if ( vTexCoord.x < 0.9999 && vTexCoord.x > 0.0001 && vTexCoord.y < 0.9999 && vTexCoord.y > 0.0001 && params.border_on_top > 0.5 )
+	if ( vScreenCoord.x < 0.9999 && vScreenCoord.x > 0.0001 && vScreenCoord.y < 0.9999 && vScreenCoord.y > 0.0001 && params.border_on_top > 0.5 )
 	border.a *= 0.0;
 
 	FragColor	=	vec4(mix(frame, border, border.a));
