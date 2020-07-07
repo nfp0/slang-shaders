@@ -96,6 +96,25 @@ layout(set = 0, binding = 2) uniform sampler2D Source;
 // Fragment definitions                                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
+float is_gap(vec2 coords_side_1, vec2 coords_side_2)
+{
+    float color = texture(Source, vTexCoord).a;
+    float color_side_1 = texture(Source, coords_side_1).a;
+    float color_side_2 = texture(Source, coords_side_2).a;
+
+    return (color == 0.0 && color_side_1 == 0.0 && color_side_2 == 0.0) ? 1 : 0;
+}
+
+float is_gap_horizontal()
+{
+    return is_gap(blur_coords_left, blur_coords_right);
+}
+
+float is_gap_vertical()
+{
+    return is_gap(blur_coords_up, blur_coords_down);
+}
+
 float blending_modifier(float color){
 	float blend_bool = (color == 0.0) ? 1 : 0;
 	return clamp(blend_bool + registers.blending_mode, 0.0, 1.0);
@@ -123,13 +142,25 @@ void main()
     vec4 adjacent_texel_4 = texture(Source, blur_coords_left_clamped).rgba;
 
     // Sum the alpha differences between neighboring texels, apply modifiers, then subtract the result from the current fragment alpha value
-    out_color.a -=  
-    ( 
-        (out_color.a - adjacent_texel_1.a) + 
-        (out_color.a - adjacent_texel_2.a) + 
-        (out_color.a - adjacent_texel_3.a) + 
-        (out_color.a - adjacent_texel_4.a) 
-    ) * registers.adjacent_texel_alpha_blending * blending_modifier(out_color.a);
+
+    bool testbool = true;
+
+    if(testbool)
+    {
+        out_color.a -=  
+        ( 
+            (out_color.a - adjacent_texel_1.a) + 
+            (out_color.a - adjacent_texel_2.a)
+        ) * registers.adjacent_texel_alpha_blending * blending_modifier(out_color.a);
+    }
+    else if(is_gap_vertical() == 1)
+    {
+        out_color.a -=  
+        ( 
+            (out_color.a - adjacent_texel_3.a) + 
+            (out_color.a - adjacent_texel_4.a)
+        ) * registers.adjacent_texel_alpha_blending * blending_modifier(out_color.a);
+    }
 
     FragColor = out_color;
 }
