@@ -59,8 +59,12 @@ layout(location = 2) out vec2 blur_coords_up;
 layout(location = 3) out vec2 blur_coords_down;
 layout(location = 4) out vec2 blur_coords_right;
 layout(location = 5) out vec2 blur_coords_left;
-layout(location = 6) out vec2 blur_coords_lower_bound;
-layout(location = 7) out vec2 blur_coords_upper_bound;
+layout(location = 6) out vec2 blur_coords_upright;
+layout(location = 7) out vec2 blur_coords_upleft;
+layout(location = 8) out vec2 blur_coords_downright;
+layout(location = 9) out vec2 blur_coords_downleft;
+layout(location = 10) out vec2 blur_coords_lower_bound;
+layout(location = 11) out vec2 blur_coords_upper_bound;
 
 void main()
 {
@@ -68,10 +72,16 @@ void main()
     vTexCoord = TexCoord;
 
     texel = registers.SourceSize.zw;
-    blur_coords_down  = vTexCoord + vec2(0.0, texel.y);
-    blur_coords_up    = vTexCoord + vec2(0.0, -texel.y);
-    blur_coords_right = vTexCoord + vec2(texel.x,  0.0);
-    blur_coords_left  = vTexCoord + vec2(-texel.x, 0.0);
+    blur_coords_down        = vTexCoord + vec2(0.0, texel.y);
+    blur_coords_up          = vTexCoord + vec2(0.0, -texel.y);
+    blur_coords_right       = vTexCoord + vec2(texel.x,  0.0);
+    blur_coords_left        = vTexCoord + vec2(-texel.x, 0.0);
+    blur_coords_downright   = vTexCoord + vec2(texel.x, texel.y);
+    blur_coords_downleft    = vTexCoord + vec2(-texel.x, texel.y);
+    blur_coords_upright     = vTexCoord + vec2(texel.x, -texel.y);
+    blur_coords_upleft      = vTexCoord + vec2(-texel.x, -texel.y);
+
+
     blur_coords_lower_bound = vec2(0.0);
     blur_coords_upper_bound = texel * (registers.OutputSize.xy - vec2(2.0));
 }
@@ -87,8 +97,12 @@ layout(location = 2) in vec2 blur_coords_up;
 layout(location = 3) in vec2 blur_coords_down;
 layout(location = 4) in vec2 blur_coords_right;
 layout(location = 5) in vec2 blur_coords_left;
-layout(location = 6) in vec2 blur_coords_lower_bound;
-layout(location = 7) in vec2 blur_coords_upper_bound;
+layout(location = 6) in vec2 blur_coords_upright;
+layout(location = 7) in vec2 blur_coords_upleft;
+layout(location = 8) in vec2 blur_coords_downright;
+layout(location = 9) in vec2 blur_coords_downleft;
+layout(location = 10) in vec2 blur_coords_lower_bound;
+layout(location = 11) in vec2 blur_coords_upper_bound;
 layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 2) uniform sampler2D Source;
 
@@ -111,6 +125,11 @@ float blending_modifier(float color)
 	return clamp(blend_bool + registers.blending_mode, 0.0, 1.0);
 }
 
+vec2 blur_coords_clamp(vec2 blur_coords)
+{
+    return clamp(blur_coords, blur_coords_lower_bound, blur_coords_upper_bound);
+}
+
 void main()
 {
     // A simple blur technique that softens harsh color transitions
@@ -121,16 +140,24 @@ void main()
     vec4 out_color = texture(Source, vTexCoord).rgba;
 
     // Clamp the blur coords to the input texture size so it doesn't attempt to sample off the texture (it'll retrieve float4(0.0) and darken the edges otherwise)
-    vec2 blur_coords_up_clamped    = clamp(blur_coords_up, blur_coords_lower_bound, blur_coords_upper_bound);
-    vec2 blur_coords_down_clamped  = clamp(blur_coords_down, blur_coords_lower_bound, blur_coords_upper_bound);
-    vec2 blur_coords_right_clamped = clamp(blur_coords_right, blur_coords_lower_bound, blur_coords_upper_bound);
-    vec2 blur_coords_left_clamped  = clamp(blur_coords_left, blur_coords_lower_bound, blur_coords_upper_bound);
+    vec2 blur_coords_up_clamped    = blur_coords_clamp(blur_coords_up);
+    vec2 blur_coords_down_clamped  = blur_coords_clamp(blur_coords_down);
+    vec2 blur_coords_right_clamped = blur_coords_clamp(blur_coords_right);
+    vec2 blur_coords_left_clamped  = blur_coords_clamp(blur_coords_left);
+    vec2 blur_coords_upleft_clamped  = blur_coords_clamp(blur_coords_upleft);
+    vec2 blur_coords_upright_clamped  = blur_coords_clamp(blur_coords_upright);
+    vec2 blur_coords_downleft_clamped  = blur_coords_clamp(blur_coords_downleft);
+    vec2 blur_coords_downright_clamped  = blur_coords_clamp(blur_coords_downright);
 
     //Sample adjacent texels based on the coordinates above
     vec4 adjacent_texel_1 = texture(Source, blur_coords_up_clamped).rgba;
     vec4 adjacent_texel_2 = texture(Source, blur_coords_down_clamped).rgba;
     vec4 adjacent_texel_3 = texture(Source, blur_coords_right_clamped).rgba;
     vec4 adjacent_texel_4 = texture(Source, blur_coords_left_clamped).rgba;
+    vec4 adjacent_texel_5 = texture(Source, blur_coords_upleft_clamped).rgba;
+    vec4 adjacent_texel_6 = texture(Source, blur_coords_upright_clamped).rgba;
+    vec4 adjacent_texel_7 = texture(Source, blur_coords_downleft_clamped).rgba;
+    vec4 adjacent_texel_8 = texture(Source, blur_coords_downright_clamped).rgba;
 
     // Sum the alpha differences between neighboring texels, apply modifiers, then subtract the result from the current fragment alpha value
 
