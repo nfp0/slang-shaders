@@ -111,23 +111,73 @@ layout(set = 0, binding = 2) uniform sampler2D Source;
 
 bool is_gap(vec2 coords_side_1, vec2 coords_side_2)
 {
-    float color = texture(Source, vTexCoord).a;
     float color_side_1 = texture(Source, coords_side_1).a;
     float color_side_2 = texture(Source, coords_side_2).a;
 
-    return color == 0.0 && color_side_1 == 0.0 && color_side_2 == 0.0;
-}
-
-float blending_modifier(float color)
-{
-	float blend_bool = (color == 0.0) ? 1 : 0;
-	return clamp(blend_bool + registers.blending_mode, 0.0, 1.0);
+    return color_side_1 == 0.0 && color_side_2 == 0.0;
 }
 
 // Clamp the blur coords to the input texture size so it doesn't attempt to sample off the texture (it'll retrieve float4(0.0) and darken the edges otherwise)
-vec2 blur_coords_clamp(vec2 blur_coords)
+float clamped_coord_alpha(vec2 blur_coords)
 {
-    return clamp(blur_coords, blur_coords_lower_bound, blur_coords_upper_bound);
+    vec2 clamped_coord = clamp(blur_coords, blur_coords_lower_bound, blur_coords_upper_bound);
+    return texture(Source, clamped_coord).a;
+}
+
+vec4 blend_gap_mode(vec4 out_color)
+{
+    // Sum the alpha differences between neighboring texels, apply modifiers, then subtract the result from the current fragment alpha value
+    if(out_color.a == 0.0)
+    {
+        bool is_gap_horizontal = is_gap(blur_coords_left, blur_coords_right);
+        bool is_gap_vertical = is_gap(blur_coords_up, blur_coords_down);
+
+        if(is_gap_horizontal && is_gap_vertical)
+        {
+            out_color.a -=
+            (
+                (out_color.a - clamped_coord_alpha(blur_coords_upleft)) +
+                (out_color.a - clamped_coord_alpha(blur_coords_upright)) +
+                (out_color.a - clamped_coord_alpha(blur_coords_downleft)) +
+                (out_color.a - clamped_coord_alpha(blur_coords_downright))
+            ) / 2;
+        }
+        else if(is_gap_horizontal)
+        {
+            out_color.a -=
+            (
+                (out_color.a - clamped_coord_alpha(blur_coords_up)) +
+                (out_color.a - clamped_coord_alpha(blur_coords_down))
+            );
+        }
+        else if(is_gap_vertical)
+        {
+            out_color.a -=
+            (
+                (out_color.a - clamped_coord_alpha(blur_coords_right)) +
+                (out_color.a - clamped_coord_alpha(blur_coords_left))
+            );
+        }
+
+        out_color.a *= registers.adjacent_texel_alpha_blending;
+    }
+
+    return out_color;
+}
+
+vec4 blend_all_mode(vec4 out_color)
+{
+    out_color.a -=
+    (
+        (out_color.a - clamped_coord_alpha(blur_coords_up)) +
+        (out_color.a - clamped_coord_alpha(blur_coords_down)) +
+        (out_color.a - clamped_coord_alpha(blur_coords_right)) +
+        (out_color.a - clamped_coord_alpha(blur_coords_left))
+    );
+
+    out_color.a *= registers.adjacent_texel_alpha_blending;
+
+    return out_color;
 }
 
 void main()
@@ -136,51 +186,10 @@ void main()
     // Specialized to only blur alpha values and limited to only blurring texels
     // lying in the spaces between two or more texels
 
-    // Sample the input textures
     vec4 out_color = texture(Source, vTexCoord).rgba;
 
-    // Sum the alpha differences between neighboring texels, apply modifiers, then subtract the result from the current fragment alpha value
-
-    bool is_gap_horizontal = is_gap(blur_coords_left, blur_coords_right);
-    bool is_gap_vertical = is_gap(blur_coords_up, blur_coords_down);
-
-    if(is_gap_horizontal && is_gap_vertical)
-    {
-        float adjacent_texel_alpha_upleft    = texture(Source, blur_coords_clamp(blur_coords_upleft)).a;
-        float adjacent_texel_alpha_upright   = texture(Source, blur_coords_clamp(blur_coords_upright)).a;
-        float adjacent_texel_alpha_downleft  = texture(Source, blur_coords_clamp(blur_coords_downleft)).a;
-        float adjacent_texel_alpha_downright = texture(Source, blur_coords_clamp(blur_coords_downright)).a;
-
-        out_color.a -=  
-        (
-            (out_color.a - adjacent_texel_alpha_upleft) +
-            (out_color.a - adjacent_texel_alpha_upright) +
-            (out_color.a - adjacent_texel_alpha_downleft) +
-            (out_color.a - adjacent_texel_alpha_downright)
-        ) * (registers.adjacent_texel_alpha_blending / 2) * blending_modifier(out_color.a);
-    }
-    else if(is_gap_horizontal)
-    {
-        float adjacent_texel_alpha_up   = texture(Source, blur_coords_clamp(blur_coords_up)).a;
-        float adjacent_texel_alpha_down = texture(Source, blur_coords_clamp(blur_coords_down)).a;
-
-        out_color.a -=  
-        (
-            (out_color.a - adjacent_texel_alpha_up) +
-            (out_color.a - adjacent_texel_alpha_down)
-        ) * registers.adjacent_texel_alpha_blending * blending_modifier(out_color.a);
-    }
-    else if(is_gap_vertical)
-    {
-        float adjacent_texel_alpha_right = texture(Source, blur_coords_clamp(blur_coords_right)).a;
-        float adjacent_texel_alpha_left  = texture(Source, blur_coords_clamp(blur_coords_left)).a;
-
-        out_color.a -=  
-        (
-            (out_color.a - adjacent_texel_alpha_right) +
-            (out_color.a - adjacent_texel_alpha_left)
-        ) * registers.adjacent_texel_alpha_blending * blending_modifier(out_color.a);
-    }
-
-    FragColor = out_color;
+    if(registers.blending_mode == 1.0)
+        FragColor = blend_all_mode(out_color);
+    else
+        FragColor = blend_gap_mode(out_color);
 }
