@@ -139,16 +139,6 @@ void main()
     // Sample the input textures
     vec4 out_color = texture(Source, vTexCoord).rgba;
 
-    //Sample adjacent texels based on the clamped coordinates
-    float adjacent_texel_alpha_up           = texture(Source, blur_coords_clamp(blur_coords_up)).a;
-    float adjacent_texel_alpha_down         = texture(Source, blur_coords_clamp(blur_coords_down)).a;
-    float adjacent_texel_alpha_right        = texture(Source, blur_coords_clamp(blur_coords_right)).a;
-    float adjacent_texel_alpha_left         = texture(Source, blur_coords_clamp(blur_coords_left)).a;
-    float adjacent_texel_alpha_upleft       = texture(Source, blur_coords_clamp(blur_coords_upleft)).a;
-    float adjacent_texel_alpha_upright      = texture(Source, blur_coords_clamp(blur_coords_upright)).a;
-    float adjacent_texel_alpha_downleft     = texture(Source, blur_coords_clamp(blur_coords_downleft)).a;
-    float adjacent_texel_alpha_downright    = texture(Source, blur_coords_clamp(blur_coords_downright)).a;
-
     // Sum the alpha differences between neighboring texels, apply modifiers, then subtract the result from the current fragment alpha value
 
     bool is_gap_horizontal = is_gap(blur_coords_left, blur_coords_right);
@@ -156,27 +146,38 @@ void main()
 
     if(is_gap_horizontal && is_gap_vertical)
     {
+        float adjacent_texel_alpha_upleft    = texture(Source, blur_coords_clamp(blur_coords_upleft)).a;
+        float adjacent_texel_alpha_upright   = texture(Source, blur_coords_clamp(blur_coords_upright)).a;
+        float adjacent_texel_alpha_downleft  = texture(Source, blur_coords_clamp(blur_coords_downleft)).a;
+        float adjacent_texel_alpha_downright = texture(Source, blur_coords_clamp(blur_coords_downright)).a;
+
         out_color.a -=  
-        ( 
-            (out_color.a - adjacent_texel_alpha_upleft) + 
+        (
+            (out_color.a - adjacent_texel_alpha_upleft) +
             (out_color.a - adjacent_texel_alpha_upright) +
-            (out_color.a - adjacent_texel_alpha_downleft) + 
+            (out_color.a - adjacent_texel_alpha_downleft) +
             (out_color.a - adjacent_texel_alpha_downright)
         ) * (registers.adjacent_texel_alpha_blending / 2) * blending_modifier(out_color.a);
     }
     else if(is_gap_horizontal)
     {
+        float adjacent_texel_alpha_up   = texture(Source, blur_coords_clamp(blur_coords_up)).a;
+        float adjacent_texel_alpha_down = texture(Source, blur_coords_clamp(blur_coords_down)).a;
+
         out_color.a -=  
-        ( 
-            (out_color.a - adjacent_texel_alpha_up) + 
+        (
+            (out_color.a - adjacent_texel_alpha_up) +
             (out_color.a - adjacent_texel_alpha_down)
         ) * registers.adjacent_texel_alpha_blending * blending_modifier(out_color.a);
     }
     else if(is_gap_vertical)
     {
+        float adjacent_texel_alpha_right = texture(Source, blur_coords_clamp(blur_coords_right)).a;
+        float adjacent_texel_alpha_left  = texture(Source, blur_coords_clamp(blur_coords_left)).a;
+
         out_color.a -=  
-        ( 
-            (out_color.a - adjacent_texel_alpha_right) + 
+        (
+            (out_color.a - adjacent_texel_alpha_right) +
             (out_color.a - adjacent_texel_alpha_left)
         ) * registers.adjacent_texel_alpha_blending * blending_modifier(out_color.a);
     }
