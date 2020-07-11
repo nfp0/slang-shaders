@@ -30,7 +30,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
 
 // Simulate response time
 // Higher values result in longer color transition periods - [0, 1]
-#pragma parameter response_time "LCD Response Time" 0.20 0.0 0.777 0.111
+#pragma parameter response_time "LCD Response Time" 0.0 0.0 0.777 0.111
 
 // Set video scale when used in console-border shaders
 #pragma parameter video_scale "Video Scale" 3.0 3.0 5.0 1.0
