@@ -134,29 +134,29 @@ vec4 blend_gap_mode(vec4 out_color)
 
         if(is_gap_horizontal && is_gap_vertical)
         {
-            out_color.a -=
+            out_color.a =
             (
-                (out_color.a - clamped_coord_alpha(blur_coords_upleft)) +
-                (out_color.a - clamped_coord_alpha(blur_coords_upright)) +
-                (out_color.a - clamped_coord_alpha(blur_coords_downleft)) +
-                (out_color.a - clamped_coord_alpha(blur_coords_downright))
-            ) / 2;
+                (clamped_coord_alpha(blur_coords_upleft) - out_color.a) +
+                (clamped_coord_alpha(blur_coords_upright) - out_color.a) +
+                (clamped_coord_alpha(blur_coords_downleft) - out_color.a) +
+                (clamped_coord_alpha(blur_coords_downright) - out_color.a)
+            ) / 4;
         }
         else if(is_gap_horizontal)
         {
-            out_color.a -=
+            out_color.a =
             (
-                (out_color.a - clamped_coord_alpha(blur_coords_up)) +
-                (out_color.a - clamped_coord_alpha(blur_coords_down))
-            );
+                (clamped_coord_alpha(blur_coords_up) - out_color.a) +
+                (clamped_coord_alpha(blur_coords_down) - out_color.a)
+            ) / 2;
         }
         else if(is_gap_vertical)
         {
-            out_color.a -=
+            out_color.a =
             (
-                (out_color.a - clamped_coord_alpha(blur_coords_right)) +
-                (out_color.a - clamped_coord_alpha(blur_coords_left))
-            );
+                (clamped_coord_alpha(blur_coords_right) - out_color.a) +
+                (clamped_coord_alpha(blur_coords_left) - out_color.a)
+            ) / 2;
         }
 
         out_color.a *= registers.adjacent_texel_alpha_blending;
@@ -167,15 +167,13 @@ vec4 blend_gap_mode(vec4 out_color)
 
 vec4 blend_all_mode(vec4 out_color)
 {
-    out_color.a -=
+    out_color.a +=
     (
-        (out_color.a - clamped_coord_alpha(blur_coords_up)) +
-        (out_color.a - clamped_coord_alpha(blur_coords_down)) +
-        (out_color.a - clamped_coord_alpha(blur_coords_right)) +
-        (out_color.a - clamped_coord_alpha(blur_coords_left))
-    );
-
-    out_color.a *= registers.adjacent_texel_alpha_blending;
+        (clamped_coord_alpha(blur_coords_up) - out_color.a) +
+        (clamped_coord_alpha(blur_coords_down) - out_color.a) +
+        (clamped_coord_alpha(blur_coords_right) - out_color.a) +
+        (clamped_coord_alpha(blur_coords_left) - out_color.a)
+    ) * registers.adjacent_texel_alpha_blending / 4;
 
     return out_color;
 }
