@@ -23,7 +23,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
 #pragma parameter blending_mode "Blending Mode" 0.0 0.0 1.0 1.0            
 
 // The amount of alpha swapped between neighboring texels
-#pragma parameter adjacent_texel_alpha_blending "Neighbor Blending" 0.70 0.0 1.0 0.01
+#pragma parameter adjacent_texel_alpha_blending "Neighbor Blending" 0.76 0.0 1.0 0.01
 
 ///////////////////////////////////////////////////////////////////////////
 //                                                                       //
@@ -110,7 +110,7 @@ layout(set = 0, binding = 2) uniform sampler2D Source;
 ////////////////////////////////////////////////////////////////////////////////
 
 // Clamp the blur coords to the input texture size so it doesn't attempt to sample off the texture (it'll retrieve float4(0.0) and darken the edges otherwise)
-// Then return it's alpha
+// Then return its alpha
 float clamped_coord_alpha(vec2 blur_coords)
 {
     vec2 clamped_coord = clamp(blur_coords, blur_coords_lower_bound, blur_coords_upper_bound);
@@ -149,7 +149,7 @@ vec4 blend_gap_mode(vec4 out_color)
                 (clamped_coord_alpha(blur_coords_downright) - out_color.a)
             ) / 4;
         }
-        // When in an horizontal gap, average the above and bellow dots
+        // When in an horizontal gap, average the above and bellow texels
         else if(is_gap_horizontal)
         {
             out_color.a =
@@ -158,7 +158,7 @@ vec4 blend_gap_mode(vec4 out_color)
                 (clamped_coord_alpha(blur_coords_down) - out_color.a)
             ) / 2;
         }
-        // When in a vertical gap, average the left and right dots
+        // When in a vertical gap, average the left and right texels
         else if(is_gap_vertical)
         {
             out_color.a =
