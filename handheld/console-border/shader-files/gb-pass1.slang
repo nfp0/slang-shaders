@@ -126,6 +126,8 @@ bool is_gap(vec2 coords_side_1, vec2 coords_side_2)
     return alpha_side_1 == 0.0 && alpha_side_2 == 0.0;
 }
 
+// A simple blur technique that softens harsh color transitions
+// Specialized to only blur alpha values
 // Blends only the texels between dots
 vec4 blend_gap_mode(vec4 out_color)
 {
@@ -190,10 +192,6 @@ vec4 blend_all_mode(vec4 out_color)
 
 void main()
 {
-    // A simple blur technique that softens harsh color transitions
-    // Specialized to only blur alpha values and limited to only blurring texels
-    // lying in the spaces between two or more texels
-
     vec4 out_color = texture(Source, vTexCoord).rgba;
 
     if(registers.blending_mode == 1.0)
