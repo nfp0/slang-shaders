@@ -72,14 +72,14 @@ void main()
     vTexCoord = TexCoord;
 
     texel = registers.SourceSize.zw;
-    blur_coords_down        = vTexCoord + vec2(0.0, texel.y);
-    blur_coords_up          = vTexCoord + vec2(0.0, -texel.y);
-    blur_coords_right       = vTexCoord + vec2(texel.x,  0.0);
-    blur_coords_left        = vTexCoord + vec2(-texel.x, 0.0);
-    blur_coords_downright   = vTexCoord + vec2(texel.x, texel.y);
-    blur_coords_downleft    = vTexCoord + vec2(-texel.x, texel.y);
-    blur_coords_upright     = vTexCoord + vec2(texel.x, -texel.y);
-    blur_coords_upleft      = vTexCoord + vec2(-texel.x, -texel.y);
+    blur_coords_down      = vTexCoord + vec2(0.0, texel.y);
+    blur_coords_up        = vTexCoord + vec2(0.0, -texel.y);
+    blur_coords_right     = vTexCoord + vec2(texel.x,  0.0);
+    blur_coords_left      = vTexCoord + vec2(-texel.x, 0.0);
+    blur_coords_downright = vTexCoord + vec2(texel.x, texel.y);
+    blur_coords_downleft  = vTexCoord + vec2(-texel.x, texel.y);
+    blur_coords_upright   = vTexCoord + vec2(texel.x, -texel.y);
+    blur_coords_upleft    = vTexCoord + vec2(-texel.x, -texel.y);
 
     blur_coords_lower_bound = vec2(0.0);
     blur_coords_upper_bound = texel * (registers.OutputSize.xy - vec2(2.0));
@@ -109,31 +109,36 @@ layout(set = 0, binding = 2) uniform sampler2D Source;
 // Fragment definitions                                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
-bool is_gap(vec2 coords_side_1, vec2 coords_side_2)
-{
-    float color_side_1 = texture(Source, coords_side_1).a;
-    float color_side_2 = texture(Source, coords_side_2).a;
-
-    return color_side_1 == 0.0 && color_side_2 == 0.0;
-}
-
 // Clamp the blur coords to the input texture size so it doesn't attempt to sample off the texture (it'll retrieve float4(0.0) and darken the edges otherwise)
+// Then return it's alpha
 float clamped_coord_alpha(vec2 blur_coords)
 {
     vec2 clamped_coord = clamp(blur_coords, blur_coords_lower_bound, blur_coords_upper_bound);
     return texture(Source, clamped_coord).a;
 }
 
+// Used for gap direction detection
+bool is_gap(vec2 coords_side_1, vec2 coords_side_2)
+{
+    float alpha_side_1 = texture(Source, coords_side_1).a;
+    float alpha_side_2 = texture(Source, coords_side_2).a;
+
+    return alpha_side_1 == 0.0 && alpha_side_2 == 0.0;
+}
+
+// Blends only the texels between dots
 vec4 blend_gap_mode(vec4 out_color)
 {
-    // Sum the alpha differences between neighboring texels, apply modifiers, then subtract the result from the current fragment alpha value
     if(out_color.a == 0.0)
     {
+        // Check if our gap is horizontal or vertical
         bool is_gap_horizontal = is_gap(blur_coords_left, blur_coords_right);
         bool is_gap_vertical = is_gap(blur_coords_up, blur_coords_down);
 
+        // When in a gap interesection, average the 4 diagonal dots
         if(is_gap_horizontal && is_gap_vertical)
         {
+            // Set the current fragment alpha value to the average of alpha differences between neighboring texels
             out_color.a =
             (
                 (clamped_coord_alpha(blur_coords_upleft) - out_color.a) +
@@ -142,6 +147,7 @@ vec4 blend_gap_mode(vec4 out_color)
                 (clamped_coord_alpha(blur_coords_downright) - out_color.a)
             ) / 4;
         }
+        // When in an horizontal gap, average the above and bellow dots
         else if(is_gap_horizontal)
         {
             out_color.a =
@@ -150,6 +156,7 @@ vec4 blend_gap_mode(vec4 out_color)
                 (clamped_coord_alpha(blur_coords_down) - out_color.a)
             ) / 2;
         }
+        // When in a vertical gap, average the left and right dots
         else if(is_gap_vertical)
         {
             out_color.a =
@@ -159,21 +166,24 @@ vec4 blend_gap_mode(vec4 out_color)
             ) / 2;
         }
 
+        // Modify the alpha value based on how high the "Neighbor Blending" parameter is set to
         out_color.a *= registers.adjacent_texel_alpha_blending;
     }
 
     return out_color;
 }
 
+// Blends all texels
 vec4 blend_all_mode(vec4 out_color)
 {
+    // Average the alpha differences between neighboring texels, apply the parameter modifier, then sum the result to the current fragment alpha value
     out_color.a +=
     (
         (clamped_coord_alpha(blur_coords_up) - out_color.a) +
         (clamped_coord_alpha(blur_coords_down) - out_color.a) +
         (clamped_coord_alpha(blur_coords_right) - out_color.a) +
         (clamped_coord_alpha(blur_coords_left) - out_color.a)
-    ) * registers.adjacent_texel_alpha_blending / 4;
+    ) / 4 * registers.adjacent_texel_alpha_blending;
 
     return out_color;
 }
