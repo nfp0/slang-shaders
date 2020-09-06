@@ -31,7 +31,7 @@ scale4 = 1.0
 alias4 = "PASS4"
 
 shader5 = shader-files/gb-pass-5.slang
-filter_linear5 = true
+filter_linear5 = false
 
 parameters = "video_scale;SCALE;OUT_X;OUT_Y;baseline_alpha;grey_balance;adjacent_texel_alpha_blending;contrast;screen_light;pixel_opacity;shadow_offset_x"
 video_scale = "4.0"
