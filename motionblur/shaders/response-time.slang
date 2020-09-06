@@ -16,7 +16,7 @@ layout(push_constant) uniform Push
 
 // Simulate response time
 // Higher values result in longer color transition periods - [0, 1]
-#pragma parameter response_time "LCD Response Time" 0.333 0.0 0.777 0.111
+#pragma parameter response_time "LCD Response Time" 0.0 0.0 0.777 0.111
 
 layout(std140, set = 0, binding = 0) uniform UBO
 {
